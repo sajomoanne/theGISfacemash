@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facemash - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container admin-container">
+        <header>
+            <h1>Facemash Admin</h1>
+        </header>
+
+        <div id="login-section" class="auth-section">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="btn">Login</button>
+            </form>
+            <p id="login-error" class="error hidden"></p>
+        </div>
+
+        <div id="upload-section" class="auth-section hidden">
+            <div class="admin-layout">
+                <div class="admin-form-section">
+                    <div class="admin-header">
+                        <h2 style="color: rgb(255, 255, 255);">Add Person</h2>
+                        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                    </div>
+
+                    <form id="upload-form">
+                        <input type="text" id="uid" placeholder="Person UID" required>
+                        <input type="text" id="name" placeholder="Person Name" required>
+                        <select id="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                        
+                        <div class="photo-inputs">
+                            <label style="color: rgba(255, 255, 255, 0.673);">Photo URLs (1-3, lowercase filenames):</label>
+                            <div class="photo-input-group">
+                                <input type="url" id="photo1" placeholder="Photo 1 URL" required>
+                                <div class="preview-thumbnail" id="preview1"></div>
+                            </div>
+                            <div class="photo-input-group">
+                                <input type="url" id="photo2" placeholder="Photo 2 URL (optional)">
+                                <div class="preview-thumbnail" id="preview2"></div>
+                            </div>
+                            <div class="photo-input-group">
+                                <input type="url" id="photo3" placeholder="Photo 3 URL (optional)">
+                                <div class="preview-thumbnail" id="preview3"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn">Add Person</button>
+                    </form>
+
+                    <p id="upload-message" class="message hidden"></p>
+                    <p id="upload-error" class="error hidden"></p>
+                </div>
+
+                <div class="admin-list-section">
+                    <h3>People Added</h3>
+                    <div id="people-list" class="people-grid"></div>
+                </div>
+
+                <div class="admin-actions-section">
+                    <h3>Danger Zone</h3>
+                    <div class="admin-actions-grid">
+                        <button id="reset-elo-btn" class="btn btn-danger" type="button">Reset All Elo Ratings</button>
+                        <button id="reset-votes-btn" class="btn btn-danger" type="button">Reset All Vote Counts</button>
+                        <button id="delete-votes-btn" class="btn btn-danger" type="button">Delete All Registered Votes</button>
+                        <button id="delete-sessions-btn" class="btn btn-danger" type="button">Delete All Sessions</button>
+                    </div>
+                    <p class="admin-actions-note">These actions permanently change Firestore data.</p>
+                    <p id="admin-action-message" class="message hidden"></p>
+                    <p id="admin-action-error" class="error hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

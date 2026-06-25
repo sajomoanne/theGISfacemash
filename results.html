@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facemash - Results</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Facemash Results</h1>
+        </header>
+
+        <div id="loading" class="loading">
+            <p>Loading...</p>
+        </div>
+
+        <div id="not-released" class="not-released hidden">
+            <h2>Results Not Available</h2>
+            <p>The results haven't been released yet. Check back later!</p>
+            <a href="index.html" class="btn">Back to Voting</a>
+        </div>
+
+        <div id="leaderboard" class="leaderboard hidden">
+            <div class="leaderboard-header">
+                <h2>Leaderboard</h2>
+                <a href="index.html" class="btn btn-secondary">Back to Voting</a>
+            </div>
+            <div id="rankings"></div>
+        </div>
+
+        <div id="error" class="error hidden">
+            <p id="error-message">An error occurred</p>
+        </div>
+    </div>
+
+    <script src="js/firebase.js"></script>
+    <script src="js/results.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // People collection
+    match /people/{personId} {
+      allow read: if true;
+      allow create, delete: if request.auth != null && request.auth.uid == '9jecMLUyZJYmXbwNG1fUVbn5zqg1';
+      allow update: if (request.auth != null && request.auth.uid == '9jecMLUyZJYmXbwNG1fUVbn5zqg1')
+                      || (
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eloRating', 'totalVotes'])
+                        && request.resource.data.uid == resource.data.uid
+                        && request.resource.data.randomId == resource.data.randomId
+                        && request.resource.data.name == resource.data.name
+                        && request.resource.data.gender == resource.data.gender
+                        && request.resource.data.photoUrls == resource.data.photoUrls
+                      );
+    }
+
+    // Votes collection
+    match /votes/{voteId} {
+      allow create: if request.resource.data.keys().hasAll(['winnerUid', 'loserUid', 'deviceId', 'timestamp'])
+                    && request.resource.data.keys().size() == 4
+                    && request.resource.data.timestamp == request.time;
+      allow read, delete: if request.auth != null && request.auth.uid == '9jecMLUyZJYmXbwNG1fUVbn5zqg1';
+    }
+
+    // Sessions collection
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow write: if request.resource.data.deviceId == sessionId;
+      allow delete: if request.auth != null && request.auth.uid == '9jecMLUyZJYmXbwNG1fUVbn5zqg1';
+    }
+    
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == '9jecMLUyZJYmXbwNG1fUVbn5zqg1';
+    }
+  }
+}
