@@ -10,6 +10,7 @@ let personLeft = null;
 let personRight = null;
 let photoIndexLeft = 0;
 let photoIndexRight = 0;
+let isBusy = false;
 
 // Initialize device ID
 if (!deviceId) {
@@ -19,21 +20,35 @@ if (!deviceId) {
 
 // DOM Elements
 const loadingEl = document.getElementById('loading');
+const introEl = document.getElementById('intro');
 const votingAreaEl = document.getElementById('voting-area');
 const completedEl = document.getElementById('completed');
 const errorEl = document.getElementById('error');
 const errorMessageEl = document.getElementById('error-message');
+const roundBufferEl = document.getElementById('round-buffer');
+const startVotingBtn = document.getElementById('start-voting-btn');
 const roundCounterEl = document.getElementById('round-counter');
 const photoLeftEl = document.getElementById('photo-left');
 const photoRightEl = document.getElementById('photo-right');
 const storySegmentsLeftEl = document.getElementById('story-segments-left');
 const storySegmentsRightEl = document.getElementById('story-segments-right');
+const mobileRoundQuery = window.matchMedia('(max-width: 768px)');
+
+function updateRoundCounter() {
+    const roundNumber = currentRound + 1;
+    roundCounterEl.textContent = mobileRoundQuery.matches
+        ? `${roundNumber}/${MAX_ROUNDS}`
+        : `Round ${roundNumber} of ${MAX_ROUNDS}`;
+}
+
+mobileRoundQuery.addEventListener('change', updateRoundCounter);
 
 // Initialize
 async function init() {
     try {
         // Check if device has completed voting
         const sessionDoc = await db.collection('sessions').doc(deviceId).get();
+        const isNewSession = !sessionDoc.exists;
         
         if (sessionDoc.exists) {
             const sessionData = sessionDoc.data();
@@ -45,8 +60,13 @@ async function init() {
             }
         }
 
+        if (isNewSession) {
+            showIntro();
+            return;
+        }
+
         // Load first pair
-        await loadPair();
+        await loadPair(true);
         showVoting();
     } catch (error) {
         console.error('Initialization error:', error);
@@ -60,8 +80,30 @@ async function init() {
     }
 }
 
+async function startVoting() {
+    if (isBusy) {
+        return;
+    }
+
+    isBusy = true;
+    startVotingBtn.disabled = true;
+    showRoundBuffer('Loading first round...');
+
+    try {
+        await loadPair(true);
+        showVoting();
+    } catch (error) {
+        console.error('Start voting error:', error);
+        showError('Failed to load photos. Please refresh.');
+    } finally {
+        isBusy = false;
+        startVotingBtn.disabled = false;
+        hideRoundBuffer();
+    }
+}
+
 // Load a random pair of people
-async function loadPair() {
+async function loadPair(throwOnError = false) {
     try {
         // Update loading message
         loadingEl.querySelector('p').textContent = 'Loading photos...';
@@ -98,45 +140,20 @@ async function loadPair() {
             throw new Error('Selected person is missing a valid gender. Please update existing people in the admin panel.');
         }
 
-        // Query for second person with the same gender (retry if same as first)
-        personRight = null;
-        let attempts = 0;
-        
-        while (!personRight && attempts < 10) {
-            const randomNum = Math.random() * 1000000;
-            const query2 = db.collection('people')
-                .where('gender', '==', personLeft.gender)
-                .where('randomId', '>=', randomNum)
-                .limit(1);
-            
-            const snapshot2 = await query2.get();
-            
-            if (snapshot2.empty) {
-                const retryQuery2 = db.collection('people')
-                    .where('gender', '==', personLeft.gender)
-                    .where('randomId', '>=', 0)
-                    .limit(1);
-                const retrySnapshot2 = await retryQuery2.get();
-                
-                if (!retrySnapshot2.empty) {
-                    const candidate = retrySnapshot2.docs[0].data();
-                    candidate.id = retrySnapshot2.docs[0].id;
-                    
-                    if (candidate.id !== personLeft.id) {
-                        personRight = candidate;
-                    }
-                }
-            } else {
-                const candidate = snapshot2.docs[0].data();
-                candidate.id = snapshot2.docs[0].id;
-                
-                if (candidate.id !== personLeft.id) {
-                    personRight = candidate;
-                }
-            }
-            
-            attempts++;
-        }
+        // Query same-gender candidates without requiring a composite index.
+        const snapshot2 = await db.collection('people')
+            .where('gender', '==', personLeft.gender)
+            .get();
+
+        const sameGenderCandidates = snapshot2.docs
+            .map((doc) => {
+                const candidate = doc.data();
+                candidate.id = doc.id;
+                return candidate;
+            })
+            .filter((candidate) => candidate.id !== personLeft.id);
+
+        personRight = sameGenderCandidates[Math.floor(Math.random() * sameGenderCandidates.length)] || null;
 
         if (!personRight) {
             throw new Error(`Could not find two different ${personLeft.gender} people. Please add or update more people via the admin panel.`);
@@ -156,11 +173,14 @@ async function loadPair() {
         displayStorySegments(storySegmentsRightEl, personRight.photoUrls, 0);
 
         // Update round counter
-        roundCounterEl.textContent = `Round ${currentRound + 1} of ${MAX_ROUNDS}`;
+        updateRoundCounter();
 
     } catch (error) {
         console.error('Error loading pair:', error);
-        if (error.message.includes('No people found') || error.message.includes('Could not find two different people')) {
+        if (throwOnError) {
+            throw error;
+        }
+        if (error.message.includes('No people found') || error.message.includes('Could not find two different')) {
             showError(error.message);
         } else {
             showError('Failed to load photos. Please refresh.');
@@ -217,6 +237,10 @@ function displayStorySegments(container, photoUrls, currentIndex) {
 
 // Navigate carousel
 function navigateCarousel(side, direction) {
+    if (isBusy) {
+        return;
+    }
+
     if (side === 'left' && personLeft && personLeft.photoUrls) {
         photoIndexLeft = (photoIndexLeft + direction + personLeft.photoUrls.length) % personLeft.photoUrls.length;
         displayPhoto(photoLeftEl, personLeft.photoUrls[photoIndexLeft]);
@@ -244,6 +268,12 @@ function calculateElo(winnerRating, loserRating) {
 
 // Handle vote
 async function vote(side) {
+    if (isBusy) {
+        return;
+    }
+
+    isBusy = true;
+
     try {
         const winner = side === 'left' ? personLeft : personRight;
         const loser = side === 'left' ? personRight : personLeft;
@@ -301,7 +331,9 @@ async function vote(side) {
             showCompleted();
         } else {
             // Load next pair
-            await loadPair();
+            showRoundBuffer();
+            await loadPair(true);
+            hideRoundBuffer();
         }
     } catch (error) {
         console.error('Vote error:', error);
@@ -315,19 +347,32 @@ async function vote(side) {
         } else {
             showError('Failed to submit vote. Please try again.');
         }
+    } finally {
+        isBusy = false;
+        hideRoundBuffer();
     }
 }
 
 // UI Helpers
 function showVoting() {
     loadingEl.classList.add('hidden');
+    introEl.classList.add('hidden');
     votingAreaEl.classList.remove('hidden');
+    completedEl.classList.add('hidden');
+    errorEl.classList.add('hidden');
+}
+
+function showIntro() {
+    loadingEl.classList.add('hidden');
+    introEl.classList.remove('hidden');
+    votingAreaEl.classList.add('hidden');
     completedEl.classList.add('hidden');
     errorEl.classList.add('hidden');
 }
 
 function showCompleted() {
     loadingEl.classList.add('hidden');
+    introEl.classList.add('hidden');
     votingAreaEl.classList.add('hidden');
     completedEl.classList.remove('hidden');
     errorEl.classList.add('hidden');
@@ -335,10 +380,20 @@ function showCompleted() {
 
 function showError(message) {
     loadingEl.classList.add('hidden');
+    introEl.classList.add('hidden');
     votingAreaEl.classList.add('hidden');
     completedEl.classList.add('hidden');
     errorEl.classList.remove('hidden');
     errorMessageEl.textContent = message;
+}
+
+function showRoundBuffer(message = 'Loading next round...') {
+    roundBufferEl.querySelector('p').textContent = message;
+    roundBufferEl.classList.remove('hidden');
+}
+
+function hideRoundBuffer() {
+    roundBufferEl.classList.add('hidden');
 }
 
 // Event Listeners
@@ -355,6 +410,7 @@ document.querySelectorAll('.carousel-btn').forEach(btn => {
 // Make person cards clickable
 document.getElementById('person-left').addEventListener('click', () => vote('left'));
 document.getElementById('person-right').addEventListener('click', () => vote('right'));
+startVotingBtn.addEventListener('click', startVoting);
 
 // Start
 init();

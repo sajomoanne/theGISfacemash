@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+<body class="voting-page">
     <div class="container">
         <header>
             <h1>who's hotter?</h1>
@@ -17,6 +17,15 @@
 
         <div id="loading" class="loading">
             <p>Loading...</p>
+        </div>
+
+        <div id="intro" class="intro hidden">
+            <div class="intro-content">
+                <p class="intro-kicker">20 quick choices</p>
+                <h2>Vote between two people at a time.</h2>
+                <p>Each round shows two people from the same category. Tap the person you prefer, use the arrows to see their other photos, and finish all 20 rounds to lock in your votes.</p>
+                <button id="start-voting-btn" class="btn" type="button">Start Voting</button>
+            </div>
         </div>
 
         <div id="voting-area" class="voting-area hidden">
@@ -53,6 +62,10 @@
 
         <div id="error" class="error hidden">
             <p id="error-message">An error occurred</p>
+        </div>
+
+        <div id="round-buffer" class="round-buffer hidden" aria-live="polite">
+            <p>Loading next round...</p>
         </div>
     </div>
 

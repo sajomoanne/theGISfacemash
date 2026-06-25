@@ -9,20 +9,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "people",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "gender",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "randomId",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []

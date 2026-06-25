@@ -45,6 +45,59 @@ header h1 {
     color: rgba(255, 255, 255, 0.7);
 }
 
+.intro {
+    min-height: calc(100vh - 110px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: left;
+}
+
+.intro-content {
+    max-width: 520px;
+    padding: 28px;
+}
+
+.intro-kicker {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.intro h2 {
+    font-size: 2.4rem;
+    line-height: 1.05;
+    margin-bottom: 16px;
+}
+
+.intro p {
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.5;
+    margin-bottom: 22px;
+}
+
+.round-buffer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 10, 0.88);
+    color: white;
+    font-weight: 600;
+    pointer-events: all;
+}
+
+.round-buffer p {
+    padding: 14px 18px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
 /* Voting Area */
 .voting-area {
     text-align: center;
@@ -243,113 +296,158 @@ header h1 {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    body {
+    body.voting-page {
         padding: 0;
+        width: 100%;
+        height: 100dvh;
+        overflow: hidden;
     }
 
-    .container {
+    .voting-page .container {
         max-width: 100%;
         margin: 0;
         border-radius: 0;
         padding: 0;
-        min-height: 100vh;
+        height: 100dvh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
-    header {
-        padding: 20px;
+    .voting-page header {
+        height: 36px;
+        padding: 8px 10px 0;
         margin-bottom: 0;
+        justify-content: flex-start;
+        align-items: flex-start;
+        flex-shrink: 0;
     }
 
-    header h1 {
-        font-size: 1.8rem;
+    .voting-page header h1 {
+        font-size: 1rem;
+        line-height: 1;
     }
 
-    .subtitle {
+    .voting-page .subtitle {
         font-size: 1rem;
     }
 
-    .voting-area {
+    .voting-page .voting-area {
         flex: 1;
         display: flex;
         flex-direction: column;
+        min-height: 0;
+        position: relative;
     }
 
-    .progress {
-        padding: 10px 20px;
+    .voting-page .progress {
+        position: fixed;
+        top: 7px;
+        right: 10px;
+        z-index: 20;
+        padding: 0;
         margin-bottom: 0;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.95rem;
+        line-height: 1;
     }
 
-    .comparison {
+    .voting-page .intro {
+        min-height: calc(100dvh - 36px);
+        padding: 0 22px;
+    }
+
+    .voting-page .intro-content {
+        padding: 0;
+    }
+
+    .voting-page .intro h2 {
+        font-size: 2rem;
+    }
+
+    .voting-page .comparison {
         flex-direction: column;
         gap: 0;
         margin: 0;
         flex: 1;
+        min-height: 0;
+        justify-content: flex-start;
+        align-items: center;
+        overflow: hidden;
     }
 
-    .person-card {
-        max-width: 100%;
+    .voting-page .person-card {
+        width: min(100vw, calc((100dvh - 36px) / 2));
+        height: min(100vw, calc((100dvh - 36px) / 2));
+        max-width: none;
         border-radius: 0;
         padding: 0;
-        flex: 1;
+        flex: 0 0 auto;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
-    .person-card:hover {
+    .voting-page .person-card:hover {
         transform: none;
         border: none;
     }
 
-    .person-card:active {
+    .voting-page .person-card:active {
         opacity: 0.9;
     }
 
-    .story-segments {
-        padding: 10px 20px;
+    .voting-page .story-segments {
+        position: absolute;
+        top: 8px;
+        left: 10px;
+        right: 10px;
+        z-index: 6;
+        padding: 0;
         margin-bottom: 0;
     }
 
-    .photo-container {
+    .voting-page .photo-container {
         aspect-ratio: 1 / 1;
-        height: auto;
+        height: 100%;
         border-radius: 0;
         flex: 1;
-        max-height: 50vh;
+        max-height: none;
         width: 100%;
     }
 
-    .main-photo {
+    .voting-page .main-photo {
         border-radius: 0;
     }
 
-    .vs-badge {
+    .voting-page .vs-badge {
         width: 50px;
         height: 50px;
         font-size: 1rem;
     }
 
-    .carousel-nav {
+    .voting-page .carousel-btn {
         width: 35px;
         height: 35px;
         font-size: 1rem;
+        opacity: 1;
     }
 
-    .completed {
+    .voting-page .completed {
         padding: 30px 20px;
     }
 
-    .rank-item {
+    .voting-page .rank-item {
         flex-direction: column;
         text-align: center;
     }
 
-    .rank-number {
+    .voting-page .rank-number {
         font-size: 1.5rem;
     }
 
-    .rank-photos {
+    .voting-page .rank-photos {
         justify-content: center;
     }
 }
