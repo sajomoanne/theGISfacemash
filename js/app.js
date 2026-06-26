@@ -14,7 +14,7 @@ let isBusy = false;
 
 // Initialize device ID
 if (!deviceId) {
-    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('facemash_device_id', deviceId);
 }
 
@@ -102,61 +102,106 @@ async function startVoting() {
     }
 }
 
-// Load a random pair of people
+// 1. Add this tracking Set OUTSIDE your function (global or component scope)
+// It stores unique pair keys like "id1_id2" to remember what was shown.
+const seenPairs = new Set();
+
 async function loadPair(throwOnError = false) {
     try {
         // Update loading message
         loadingEl.querySelector('p').textContent = 'Loading photos...';
         
-        // Generate a random number
-        const randomNum1 = Math.random() * 1000000;
+        let selectedLeft = null;
+        let selectedRight = null;
+        let attempts = 0;
+        const maxAttempts = 15; // Increased slightly to give matchmaking room to expand
 
-        // Query for first person
-        const query1 = db.collection('people')
-            .where('randomId', '>=', randomNum1)
-            .limit(1);
-        
-        const snapshot1 = await query1.get();
-        
-        if (snapshot1.empty) {
-            // Try with a lower random number
-            const retryQuery1 = db.collection('people')
-                .where('randomId', '>=', 0)
-                .limit(1);
-            const retrySnapshot1 = await retryQuery1.get();
+        // Loop to find a valid, unseen pair
+        let eloTolerance = 150;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+
+            // Dynamic matchmaking queue expansion
+            if (attempts > 5) eloTolerance = 300;
+            if (attempts > 10) eloTolerance = 600;
+
+            // Generate a random number
+            const randomNum1 = Math.random() * 1000000;
+
+            // Query for first person
+            let snapshot1 = await db.collection('people')
+                .where('randomId', '>=', randomNum1)
+                .limit(1)
+                .get();
             
-            if (retrySnapshot1.empty) {
+            if (snapshot1.empty) {
+                // Try with a lower random number
+                snapshot1 = await db.collection('people')
+                    .where('randomId', '>=', 0)
+                    .limit(1)
+                    .get();
+            }
+            
+            if (snapshot1.empty) {
                 throw new Error('No people found in database. Please add people via the admin panel.');
             }
             
-            personLeft = retrySnapshot1.docs[0].data();
-            personLeft.id = retrySnapshot1.docs[0].id;
-        } else {
-            personLeft = snapshot1.docs[0].data();
-            personLeft.id = snapshot1.docs[0].id;
+            const candidateLeft = snapshot1.docs[0].data();
+            candidateLeft.id = snapshot1.docs[0].id;
+
+            // Extract candidateLeft's ELO (default to 1200 if undefined)
+            const leftElo = candidateLeft.eloRating !== undefined ? candidateLeft.eloRating : 1200;
+
+            if (!['male', 'female'].includes(candidateLeft.gender)) {
+                throw new Error('Selected person is missing a valid gender. Please update existing people in the admin panel.');
+            }
+
+            // Query same-gender candidates
+            const snapshot2 = await db.collection('people')
+                .where('gender', '==', candidateLeft.gender)
+                .get();
+
+            // Filter out candidateLeft AND any person they have already been paired with
+            const sameGenderCandidates = snapshot2.docs
+                .map((doc) => {
+                    const candidate = doc.data();
+                    candidate.id = doc.id;
+                    return candidate;
+                })
+                .filter((candidate) => {
+                    // Rule 1: Cannot pair a person with themselves
+                    if (candidate.id === candidateLeft.id) return false;
+
+                    // Rule 2: Cannot show a pair that has already been seen
+                    const pairKey = [candidateLeft.id, candidate.id].sort().join('_');
+                    if (seenPairs.has(pairKey)) return false;
+
+                    // Rule 3: Matchmaking Tier Check (FIX ADDED HERE)
+                    const rightElo = candidate.eloRating !== undefined ? candidate.eloRating : 1200;
+                    const eloDifference = Math.abs(leftElo - rightElo);
+                    
+                    return eloDifference <= eloTolerance;
+                });
+
+            // If we found valid unseen options for this person, pick one and break the loop
+            if (sameGenderCandidates.length > 0) {
+                selectedLeft = candidateLeft;
+                selectedRight = sameGenderCandidates[Math.floor(Math.random() * sameGenderCandidates.length)];
+                
+                // Save this specific combination to the seen list
+                const finalPairKey = [selectedLeft.id, selectedRight.id].sort().join('_');
+                seenPairs.add(finalPairKey);
+                break; 
+            }
         }
 
-        if (!['male', 'female'].includes(personLeft.gender)) {
-            throw new Error('Selected person is missing a valid gender. Please update existing people in the admin panel.');
-        }
+        // Assign to your global/state variables
+        personLeft = selectedLeft;
+        personRight = selectedRight;
 
-        // Query same-gender candidates without requiring a composite index.
-        const snapshot2 = await db.collection('people')
-            .where('gender', '==', personLeft.gender)
-            .get();
-
-        const sameGenderCandidates = snapshot2.docs
-            .map((doc) => {
-                const candidate = doc.data();
-                candidate.id = doc.id;
-                return candidate;
-            })
-            .filter((candidate) => candidate.id !== personLeft.id);
-
-        personRight = sameGenderCandidates[Math.floor(Math.random() * sameGenderCandidates.length)] || null;
-
-        if (!personRight) {
-            throw new Error(`Could not find two different ${personLeft.gender} people. Please add or update more people via the admin panel.`);
+        if (!personLeft || !personRight) {
+            throw new Error(`Could not find any closely ranked unseen pairs. Please add more people via the admin panel.`);
         }
 
         // Store in state
@@ -180,14 +225,13 @@ async function loadPair(throwOnError = false) {
         if (throwOnError) {
             throw error;
         }
-        if (error.message.includes('No people found') || error.message.includes('Could not find two different')) {
+        if (error.message.includes('No people found') || error.message.includes('Could not find any closely ranked')) {
             showError(error.message);
         } else {
             showError('Failed to load photos. Please refresh.');
         }
     }
 }
-
 // Preload images
 function preloadImages(urlsLeft, urlsRight) {
     return new Promise((resolve, reject) => {
@@ -387,8 +431,7 @@ function showError(message) {
     errorMessageEl.textContent = message;
 }
 
-function showRoundBuffer(message = 'Loading next round...') {
-    roundBufferEl.querySelector('p').textContent = message;
+function showRoundBuffer() {
     roundBufferEl.classList.remove('hidden');
 }
 
